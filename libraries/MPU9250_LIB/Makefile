@@ -1,0 +1,15 @@
+BOARD_TAG = atmega328
+#define MPU9250
+# BOARD_TAG = uno
+# BOARD_TAG = mega2560
+# BOARD_TAG = leonardo
+
+F_CPU = 8000000L
+
+
+# CXXFLAGS+=-DI2CDEV_SERIAL_DEBUG 
+# CXXFLAGS+=-DI2CDEV_SERIAL_DEBUG -DMPU6050 -DMPU_DEBUG 
+CXXFLAGS+=-DMPU9150 
+
+include ../Arduino-Makefile/Arduino.mk
+
