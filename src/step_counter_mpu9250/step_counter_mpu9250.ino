@@ -54,7 +54,7 @@ int newSteps = 0;
 int newTime = 0;
 int oldSteps = 0;
 int set = 0;
-
+//stage
 
 void loop() {
     
