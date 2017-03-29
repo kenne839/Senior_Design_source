@@ -57,12 +57,12 @@
  * TxBufSize must be zero in all SerialPort constructors if
  * BUFFERED_TX is zero.
  */
-#define BUFFERED_TX 1
+#define BUFFERED_TX 0
 //------------------------------------------------------------------------------
 /**
  * Set ENABLE_RX_ERROR_CHECKING zero to disable RX error checking.
  */
-#define ENABLE_RX_ERROR_CHECKING 1
+#define ENABLE_RX_ERROR_CHECKING 0
 //------------------------------------------------------------------------------
 // Define symbols to allocate 64 byte ring buffers with capacity for 63 bytes.
 /** Define NewSerial with buffering like Arduino 1.0. */

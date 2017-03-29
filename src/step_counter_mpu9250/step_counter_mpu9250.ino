@@ -1,5 +1,7 @@
 /*********************
  * This appears to be working with arduino 1.8.1 IDE (latest?)
+ 
+ HAVE TO GO INTO ARDUINO LIBRARY FILES TO CHANGE SERIALPORT/SERIALPORT.H/ BUFFERED_TX AND ENABLE_RX_ERROR_CHECKING TO 0
  */
 
 
@@ -17,6 +19,7 @@
 #include "inv_mpu.h"
 #include "I2Cdev.h"
 #define DEFAULT_MPU_HZ  (20)
+#define COMPSERIAL 0
  
 Timer t;
 unsigned long stepCount = 0;
@@ -24,12 +27,53 @@ unsigned long stepTime = 0;
 unsigned long lastStepCount = 0;
 int ret;
 int error123;
+
+int UI_INT;
+int temp;
+
 int ledPin = 13;
 
 void setup() {
+	pinMode(ledPin, OUTPUT);
     Fastwire::setup(400,0);
     Serial.begin(57600);
-    delay(1000); //let OPENLOG init.
+    delay(1000);
+	
+	
+	Serial.println("reset");
+	delay(1000);
+	while(1) {
+    if(Serial.available())
+      if(Serial.read() == '>') break; //if this breaks than we have liftoff.. or command mode
+	}								  //need to change this if I want to read config file first
+	
+	Serial.println("read UI_SET.TXT 0 2");
+	
+	//read in value from UI_SET text file, set in the user interface
+	while(1) {
+		if(Serial.available()){
+			if(Serial.read() == '2')
+        break;
+		}
+	}
+	while(1){
+    if(Serial.available()){
+      temp = Serial.read();
+      //Serial.println(temp);
+      if ((temp == '0') || (temp == '1')){
+        break;
+      }
+    }
+	}
+
+	UI_INT = temp; 
+	Serial.println("append SCNT.TXT");
+	while(1) {
+		if(Serial.available()){
+			if(Serial.read() == '<') break;
+	  }
+	}
+	
     ret = mympu_open(200);
 
     dmp_load_motion_driver_firmware();
@@ -42,8 +86,8 @@ void setup() {
 
     //int tickEvent = t.every(5000, ticker);
     
-    Serial.print("MPU init: "); Serial.println(ret);
-    Serial.print("Free mem: "); Serial.println(freeRam());
+    //Serial.print("MPU init: "); Serial.println(ret);
+    //Serial.print("Free mem: "); Serial.println(freeRam());
 }
 
 unsigned int c = 0; //cumulative number of successful MPU/DMP reads
@@ -54,27 +98,40 @@ int newSteps = 0;
 int newTime = 0;
 int oldSteps = 0;
 int set = 0;
-//stage
+
 
 void loop() {
+	
+	/*if(UI_INT == 42){
+		digitalWrite(ledPin, HIGH);
+		delay(1000);
+		digitalWrite(ledPin, LOW);
+		delay(1000);
+	}*/
     
     dmp_get_pedometer_walk_time(&stepTime);
     dmp_get_pedometer_step_count(&stepCount);
     //t.update();
     //ret = mympu_update(); this was to update the gyro values, causes error when using DMP
-    if(!set){
+    /*if(!set){
       Serial.println("Pedometer will begin after 5 seconds of steps taken");
-    }
+    }*/
 
    newSteps = stepCount;
    if(newSteps != oldSteps){
 
       oldSteps = newSteps;
-      Serial.print("Walked " + String(stepCount) + " steps");
-      Serial.println(" (" + String((stepTime) / 1000.0) + " s)");
+      Serial.println(newSteps);
+      //Serial.print("Walked " + String(stepCount) + " steps");
+      //Serial.println(" (" + String((stepTime) / 1000.0) + " s)");
     }
 
     set = 1;
+
+    digitalWrite(ledPin, HIGH);
+    delay(1000);
+    digitalWrite(ledPin, LOW);
+    delay(1000);
 
 /* SHOULD NEVER RETURN ERROR IF NOT READING ACCELEROMTER
     switch (ret) {

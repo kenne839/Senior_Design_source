@@ -99,7 +99,8 @@ void(* Reset_AVR) (void) = 0; //Way of resetting the ATmega
 
 #define MAX_CFG "115200,103,214,0,1,1,0\0" //= 115200 bps, escape char of ASCII(103), 214 times, new log mode, verbose on, echo on, ignore RX false. 
 #define CFG_LENGTH (strlen(MAX_CFG) + 1) //Length of text found in config file. strlen ignores \0 so we have to add it back 
-#define SEQ_FILENAME "SEQLOG00.TXT" //This is the name for the file when you're in sequential mode
+#define SEQ_FILENAME "SEQLOG00.TXT" //This is the old name for the file when you're in sequential mode
+#define STEP_FILENAME "SCNT.TXT" //This is the new name for sequential logging for step counting
 
 //Internal EEPROM locations for the user settings
 #define LOCATION_SYSTEM_SETTING		  0x02
@@ -371,7 +372,7 @@ char* newLog(void)
 }
 
 //Log to the same file every time the system boots, sequentially
-//Checks to see if the file SEQLOG.txt is available
+//Checks to see if the file SCNT.TXT is available
 //If not, create it
 //If yes, append to it
 //Return 0 on error
@@ -380,8 +381,8 @@ void seqLog(void)
 {
   SdFile seqFile;
 
-  char sequentialFileName[strlen(SEQ_FILENAME)]; //Limited to 8.3
-  strcpy_P(sequentialFileName, PSTR(SEQ_FILENAME)); //This is the name of the config file. 'config.sys' is probably a bad idea.
+  char sequentialFileName[strlen(STEP_FILENAME)]; //Limited to 8.3
+  strcpy_P(sequentialFileName, PSTR(STEP_FILENAME)); //
 
   //Try to create sequential file
   if (!seqFile.open(sequentialFileName, O_CREAT | O_WRITE))
