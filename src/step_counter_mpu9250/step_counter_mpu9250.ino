@@ -19,7 +19,6 @@
 #include "inv_mpu.h"
 #include "I2Cdev.h"
 #define DEFAULT_MPU_HZ  (20)
-#define COMPSERIAL 0
  
 Timer t;
 unsigned long stepCount = 0;
@@ -66,7 +65,14 @@ void setup() {
     }
 	}
 
-	UI_INT = temp; 
+	if(temp == '0')
+		UI_INT = 0;
+	else if (temp == '1')
+		UI_INT = 1;
+  else
+    UI_INT = 42;
+	
+	
 	Serial.println("append SCNT.TXT");
 	while(1) {
 		if(Serial.available()){
@@ -74,20 +80,20 @@ void setup() {
 	  }
 	}
 	
+    
     ret = mympu_open(200);
+		dmp_load_motion_driver_firmware();
+		dmp_set_fifo_rate(DEFAULT_MPU_HZ);
+		mpu_set_dmp_state(1);
+		
+		dmp_set_pedometer_walk_time(stepTime);
+		dmp_set_pedometer_step_count(stepCount);
 
-    dmp_load_motion_driver_firmware();
-    //dmp_enable_feature(DMP_FEATURE_PEDOMETER); already set in mympu_open function
-    dmp_set_fifo_rate(DEFAULT_MPU_HZ);
-    mpu_set_dmp_state(1);
-    
-    dmp_set_pedometer_walk_time(stepTime);
-    dmp_set_pedometer_step_count(stepCount);
+    //int tickEvent = t.every(5000, ticker); //only will check status of steps every 10 seconds
+	
 
-    //int tickEvent = t.every(5000, ticker);
     
-    //Serial.print("MPU init: "); Serial.println(ret);
-    //Serial.print("Free mem: "); Serial.println(freeRam());
+
 }
 
 unsigned int c = 0; //cumulative number of successful MPU/DMP reads
@@ -98,70 +104,63 @@ int newSteps = 0;
 int newTime = 0;
 int oldSteps = 0;
 int set = 0;
+int state = 0;
 
 
 void loop() {
-	
-	/*if(UI_INT == 42){
-		digitalWrite(ledPin, HIGH);
-		delay(1000);
-		digitalWrite(ledPin, LOW);
-		delay(1000);
-	}*/
     
+	if(UI_INT == 1){ //if we want to count steps
+    //t.update();
     dmp_get_pedometer_walk_time(&stepTime);
     dmp_get_pedometer_step_count(&stepCount);
-    //t.update();
-    //ret = mympu_update(); this was to update the gyro values, causes error when using DMP
-    /*if(!set){
-      Serial.println("Pedometer will begin after 5 seconds of steps taken");
-    }*/
-
-   newSteps = stepCount;
-   if(newSteps != oldSteps){
-
+    
+     newSteps = stepCount;
+     if(newSteps != oldSteps){
       oldSteps = newSteps;
       Serial.println(newSteps);
       //Serial.print("Walked " + String(stepCount) + " steps");
       //Serial.println(" (" + String((stepTime) / 1000.0) + " s)");
     }
 
-    set = 1;
+    digitalWrite(ledPin, (state) ? HIGH : LOW);
+    state = !state;
+	}
+	
+	else if(!UI_INT){
+		ret = mympu_update(); //this was to update the gyro values, causes error when using DMP
 
+		switch (ret) {
+		case 0: c++; break;
+		case 1: np++; return;
+		case 2: err_o++; return;
+		case 3: err_c++; return; 
+		default: 
+			Serial.print("READ ERROR!  ");
+			Serial.println(ret);
+			return;
+		}	
+
+		if (!(c%25)) {
+			Serial.print(np); Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
+			Serial.print(" Y: "); Serial.print(mympu.ypr[0]);
+			Serial.print(" P: "); Serial.print(mympu.ypr[1]);
+			Serial.print(" R: "); Serial.print(mympu.ypr[2]);
+			Serial.print("\tgy: "); Serial.print(mympu.gyro[0]);
+			Serial.print(" gp: "); Serial.print(mympu.gyro[1]);
+			Serial.print(" gr: "); Serial.println(mympu.gyro[2]);
+		}
+	}
+
+  else {
+    delay(250);
     digitalWrite(ledPin, HIGH);
-    delay(1000);
+    delay(250);
     digitalWrite(ledPin, LOW);
-    delay(1000);
-
-/* SHOULD NEVER RETURN ERROR IF NOT READING ACCELEROMTER
-    switch (ret) {
-	case 0: c++; break;
-	case 1: np++; return;
-	case 2: err_o++; return;
-	case 3: err_c++; return; 
-	default: 
-		Serial.print("READ ERROR!  ");
-		Serial.println(ret);
-		return;
-    }
-    set = 1;
-
-    */
-
-    /*if (!(c%25)) {
-	    Serial.print(np); Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
-	    Serial.print(" Y: "); Serial.print(mympu.ypr[0]);
-	    Serial.print(" P: "); Serial.print(mympu.ypr[1]);
-	    Serial.print(" R: "); Serial.print(mympu.ypr[2]);
-	    Serial.print("\tgy: "); Serial.print(mympu.gyro[0]);
-	    Serial.print(" gp: "); Serial.print(mympu.gyro[1]);
-	    Serial.print(" gr: "); Serial.println(mympu.gyro[2]);
-
-    }*/
+  }
 }
 /*
 void ticker(){
-  Serial.print("2 second tick: millis()=");
-  Serial.println(millis());
+
+
 }*/
 
