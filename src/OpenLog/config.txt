@@ -1,2 +1,2 @@
-57600,36,3,0,1,1,0
+57600,36,3,2,1,1,0
 baud,escape,esc#,mode,verb,echo,ignoreRX
