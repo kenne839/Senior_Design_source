@@ -3,10 +3,11 @@
  ***********************
  **
  **********************************************************
- **Made By: Michael Kennedy
+ **Made By: Michael Kennedy SPRING 2017
  **********************************************************
  **
  ** This is the main file for the Arduino Pro Mini to control the OpenLog and MPU-9250 modules
+ ** to log steps taken or accelerometer/gyrometer data
  ** Could optimize the libraries to remove functions not used in the program if space is an issue.
  ** 
  ** This program relies on an outside source to set the UI_SET.TXT bit to the proper mode (step 1 or gyro 0)
