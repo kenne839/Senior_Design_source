@@ -222,12 +222,12 @@ void printMPU(void){
 	}*/
 
     if (!(c%25)) {
-      Serial.print(np);// Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
-      Serial.print("  "); 
+      //Serial.print(np);// Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
+      //Serial.print(":"); 
       Serial.print(mympu.ypr[0]); //yaw
-      Serial.print("  "); 
+      Serial.print(":"); 
       Serial.print(mympu.ypr[1]); //pitch
-      Serial.print("  "); 
+      Serial.print(":"); 
       Serial.println(mympu.ypr[2]); //roll
       //Serial.print("\tgy: "); Serial.print(mympu.gyro[0]);
       //Serial.print(" gp: "); Serial.print(mympu.gyro[1]);
