@@ -15,7 +15,13 @@
  ** Escape character is three of $$$ (ASCII 36)
  **
  HAVE TO GO INTO ARDUINO LIBRARY FILES TO CHANGE SERIALPORT/SERIALPORT.H/ BUFFERED_TX AND ENABLE_RX_ERROR_CHECKING TO 0
+
+
+
+ TO DO: IMPLEMENT ACCELEROMTER LOGGING AND KALMAN FILTER, GYRO CALIBRATION
+	  : I THINK THAT INVOLVES THE DMP AGAIN.
  */
+
 
 
 #include <Event.h>
@@ -33,6 +39,11 @@
 #include "I2Cdev.h"
 #define DEFAULT_MPU_HZ  (200) //actually the max as well for DMP
  
+void setupSD(void);
+void updateSteps(void);
+void printMPU(void);
+void readMPU(void);
+
 Timer t;
 unsigned long stepCount = 0;
 unsigned long stepTime = 0;
@@ -47,57 +58,18 @@ int ledPin = 13;
 
 void setup() {
 	  
-	  pinMode(ledPin, OUTPUT);
-    Fastwire::setup(400,0);
-    ret = mympu_open(200); //enable mpu
-    Serial.begin(57600);   //connect to OpenLog
-    delay(1000);           //Let the
+	pinMode(ledPin, OUTPUT);
+	Fastwire::setup(400,0);
+	ret = mympu_open(200); //enable mpu, need this for both DMP and Gyro
+	Serial.begin(57600);   //connect to OpenLog
+	delay(1000);           //Let the serial connect
 	
+	setupSD();
+		
 	
-	Serial.println("reset");
-	delay(1000);
-	while(1) {
-    if(Serial.available())
-      if(Serial.read() == '>') break; //if this breaks than we have liftoff.. or command mode
-	}								  //need to change this if I want to read config file first
-	
-	Serial.println("read UI_SET.TXT 0 2");
-	
-	//read in value from UI_SET text file, set in the user interface
-	while(1) {
-		if(Serial.available()){
-			if(Serial.read() == '2')
-        break;
-		}
-	}
-	while(1){
-    if(Serial.available()){
-      temp = Serial.read();
-      //Serial.println(temp);
-      if ((temp == '0') || (temp == '1')){
-        break;
-      }
-    }
-	}
-
-	if(temp == '0')
-		UI_INT = 0;
-	else if (temp == '1')
-		UI_INT = 1;
-  else
-    UI_INT = 42;
-	
-	
-	Serial.println("append SCNT.TXT");
-	while(1) {
-		if(Serial.available()){
-			if(Serial.read() == '<') break;
-	  }
-	}
-	
-  //If Step_count mode
-  //load the DMP module
-  //turn it on and initizlize step count/stepTime  
+	//If Step_count mode
+	//load the DMP module
+	//turn it on and initizlize step count/stepTime  
 	if(UI_INT == 1){
 		dmp_load_motion_driver_firmware();
 		dmp_set_fifo_rate(DEFAULT_MPU_HZ);
@@ -109,7 +81,7 @@ void setup() {
 
     //int tickEvent = t.every(5000, ticker); //only will check status of steps every 10 seconds
 	
-  delay(10000); //test to see if gyrometer stabilizes after 10 seconds
+	delay(10000); //test to see if gyrometer stabilizes after 10 seconds
     
 
 }
@@ -127,53 +99,126 @@ int state = 0;
 
 void loop() {
 
-  //read DMP memory for step time and count
-  //update if it has changed
-  //might need to slow this down for less power?
-  //DMP hold the value anyway  
+	//read DMP memory for step time and count
+	//update if it has changed
+	//might need to slow this down for less power?
+	//DMP hold the value anyway  
 	if(UI_INT == 1){ //if we want to count steps
-    //t.update();
-    dmp_get_pedometer_walk_time(&stepTime);
+		//t.update();
+		updateSteps();
+		digitalWrite(ledPin, (state) ? HIGH : LOW); //toggle LED to view function
+		state = !state;
+	}
+	
+	else if(!UI_INT){		
+		readMPU();
+		printMPU();   
+	}
+}
+
+/*
+void ticker(){
+}*/
+
+////
+//Reads the value of UI_INT from the SDcard
+//Also sets the SDcard into sequential logging mode.
+//Returns: Nothing
+//
+void setupSD(void){
+	
+	Serial.println("reset");
+	delay(1000);
+	while(1) {
+    if(Serial.available())
+      if(Serial.read() == '>') break; //if this breaks than we have liftoff.. or command mode
+	}								  //need to change this if I want to read config file first
+	
+	Serial.println("read UI_SET.TXT 0 2");
+	
+	//read in value from UI_SET text file, set in the user interface
+	while(1) {
+		if(Serial.available()){
+			if(Serial.read() == '2')
+			break;
+		}
+	}
+	
+	//Get value of UI_SET
+	while(1){
+		if(Serial.available()){
+		  temp = Serial.read();
+		  if ((temp == '0') || (temp == '1')){
+			break;
+		  }
+		}
+	}
+
+	//ASCII TO INT
+	if(temp == '0')
+		UI_INT = 0;
+	else if (temp == '1')
+		UI_INT = 1;
+	else
+		UI_INT = 42; //error?
+	
+	Serial.println("append SCNT.TXT");
+	while(1) {
+		if(Serial.available()){
+			if(Serial.read() == '<') break;
+	  }
+	}
+}
+
+/******************************
+*Read DMP pedometer and write to SD if new.
+******************************/
+void updateSteps(void){
+	dmp_get_pedometer_walk_time(&stepTime);
     dmp_get_pedometer_step_count(&stepCount);
     
      newSteps = stepCount;
      if(newSteps != oldSteps){
-      oldSteps = newSteps;
-      Serial.println(newSteps);
-      //Serial.print("Walked " + String(stepCount) + " steps");
-      //Serial.println(" (" + String((stepTime) / 1000.0) + " s)");
-    }
+		  oldSteps = newSteps;
+		  Serial.println(newSteps);
+		  //Serial.print("Walked " + String(stepCount) + " steps");
+		  //Serial.println(" (" + String((stepTime) / 1000.0) + " s)");
+    }	
+}
 
-    digitalWrite(ledPin, (state) ? HIGH : LOW); //toggle LED to view function
-    state = !state;
-	}
-	
-	else if(!UI_INT){
-  
-		ret = mympu_update(); //update GRYO registers
+/************************************************
+Update FIFO registers in the MPU, update error checking
+*************************************************/
+void readMPU(void){
+	ret = mympu_update(); //update GRYO registers
 
-		switch (ret) {
-		case 0: c++; break;
-		case 1: np++; return;  //no packet error happens when running 8Mhz clock to a 200 hz update rate...
-		case 2: err_o++; return;
-		case 3: err_c++; return; 
-		default: 
-			Serial.print("READ ERROR!  ");
-			Serial.println(ret);
-			return;
-		}	
+	switch (ret) {
+	case 0: c++; break;
+	case 1: np++; return;  //no packet error happens when running 8Mhz clock to a 200 hz update rate...
+	case 2: err_o++; return;
+	case 3: err_c++; return; 
+	default: 
+		Serial.print("READ ERROR!  ");
+		Serial.println(ret);
+		return;
+	}			
+}
 
-    
-  /*
-		if (!(c%25)) {
-			Serial.print(np); Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
-			Serial.print(" Y: "); Serial.print(mympu.ypr[0]);
-			Serial.print(" P: "); Serial.print(mympu.ypr[1]);
-			Serial.print(" R: "); Serial.print(mympu.ypr[2]);
-			Serial.print("\tgy: "); Serial.print(mympu.gyro[0]);
-			Serial.print(" gp: "); Serial.print(mympu.gyro[1]);
-			Serial.print(" gr: "); Serial.println(mympu.gyro[2]);
-		}*/
+/*********************
+Print from FIFO registers on MPU
+Currently only printing current values of yaw, pitch, roll
+*********************/
+void printMPU(void){
+    /*
+	if (!(c%25)) {
+		Serial.print(np); Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
+		Serial.print(" Y: "); Serial.print(mympu.ypr[0]);
+		Serial.print(" P: "); Serial.print(mympu.ypr[1]);
+		Serial.print(" R: "); Serial.print(mympu.ypr[2]);
+		Serial.print("\tgy: "); Serial.print(mympu.gyro[0]);
+		Serial.print(" gp: "); Serial.print(mympu.gyro[1]);
+		Serial.print(" gr: "); Serial.println(mympu.gyro[2]);
+	}*/
 
     if (!(c%25)) {
       Serial.print(np);// Serial.print("  "); Serial.print(err_c); Serial.print(" "); Serial.print(err_o);
@@ -187,11 +232,4 @@ void loop() {
       //Serial.print(" gp: "); Serial.print(mympu.gyro[1]);
       //Serial.print(" gr: "); Serial.println(mympu.gyro[2]);
     }
-	}
 }
-/*
-void ticker(){
-
-
-}*/
-
