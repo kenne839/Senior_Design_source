@@ -82,7 +82,7 @@ void setup() {
 
     //int tickEvent = t.every(5000, ticker); //only will check status of steps every 10 seconds
 	
-	delay(10000); //test to see if gyrometer stabilizes after 10 seconds
+	//delay(10000); //test to see if gyrometer stabilizes after 10 seconds
     
 
 }
